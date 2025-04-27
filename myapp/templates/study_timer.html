@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cute Study Timer ✨</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary: #ffb5e8;
+        --secondary: #b5deff;
+        --background: #fff0f5;
+        --text: #565656;
+      }
+
+      body {
+        font-family: "Segoe UI", sans-serif;
+        background-color: var(--background);
+        color: var(--text);
+        margin: 0;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      h1 {
+        color: var(--primary);
+        text-align: center;
+        font-size: 2.5rem;
+        margin-bottom: 2rem;
+      }
+
+      .timer-display {
+        font-size: 4rem;
+        text-align: center;
+        color: var(--text);
+        margin: 2rem 0;
+      }
+
+      .btn {
+        background-color: var(--primary);
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        color: white;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+        margin: 5px;
+      }
+
+      .btn:hover {
+        transform: scale(1.05);
+      }
+
+      .btn-secondary {
+        background-color: var(--secondary);
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+
+      .task-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .task-item {
+        background-color: white;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        border-radius: 10px;
+        border: 2px solid var(--primary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid var(--primary);
+        border-radius: 10px;
+        font-size: 1rem;
+      }
+
+      .icon {
+        margin-right: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1><i class="fas fa-clock icon"></i>Study Timer</h1>
+
+      <div class="timer-display">
+        <span id="minutes">25</span>:<span id="seconds">00</span>
+      </div>
+
+      <div class="controls">
+        <form
+          method="POST"
+          action="{% url 'start_study_timer' %}"
+          style="display: inline"
+        >
+          {% csrf_token %}
+          <button class="btn" id="start" type="submit">
+            <i class="fas fa-play icon"></i>Start Session
+          </button>
+        </form>
+
+        <form
+          method="POST"
+          action="{% url 'stop_study_timer' %}"
+          style="display: inline"
+        >
+          {% csrf_token %}
+          <button class="btn btn-secondary" id="stop" type="submit">
+            <i class="fas fa-stop icon"></i>Stop Session
+          </button>
+        </form>
+      </div>
+
+      {% if session %}
+      <div class="current-session">
+        <h2><i class="fas fa-hourglass-half icon"></i>Current Session</h2>
+        <div class="task-item">
+          <span>Started at: {{ session.start_time|date:"H:i" }}</span>
+          {% if session.end_time %}
+          <span>Duration: {{ session.session_duration }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="sessions">
+        <h2><i class="fas fa-history icon"></i>Past Sessions</h2>
+        <ul class="task-list">
+          {% for session in past_sessions %}
+          <li class="task-item">
+            <span>{{ session.start_time|date:"Y-m-d H:i" }}</span>
+            <span>Duration: {{ session.session_duration }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      let timeLeft = 1500; // 25 minutes in seconds
+      let timerId = null;
+
+      function updateTimerDisplay() {
+          const minutes = Math.floor(timeLeft / 60);
+          const seconds = timeLeft % 60;
+          document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+          document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+      }
+
+      // Check if there's an active session
+      {% if session and session.is_active %}
+          // Start the timer automatically if there's an active session
+          const startTime = new Date("{{ session.start_time|date:'c' }}").getTime();
+          const now = new Date().getTime();
+          const elapsedSeconds = Math.floor((now - startTime) / 1000);
+          timeLeft = Math.max(1500 - elapsedSeconds, 0);
+
+          function startTimer() {
+              if (timerId) return;
+
+              timerId = setInterval(() => {
+                  if (timeLeft > 0) {
+                      timeLeft--;
+                      updateTimerDisplay();
+                  } else {
+                      clearInterval(timerId);
+                  }
+              }, 1000);
+          }
+
+          startTimer();
+      {% endif %}
+
+      // Update display immediately
+      updateTimerDisplay();
+    </script>
+  </body>
+</html>
